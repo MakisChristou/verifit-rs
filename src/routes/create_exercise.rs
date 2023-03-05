@@ -1,4 +1,5 @@
 use crate::database::exercises;
+use crate::database::sea_orm_active_enums::Bodypart;
 use axum::Extension;
 use axum::Json;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, Set};
@@ -14,10 +15,9 @@ pub struct RequestTask {
 #[derive(Deserialize)]
 pub struct RequestExercise {
     name: String,
-    bodypart: String,
+    bodypart: Bodypart,
     is_favorite: bool,
 }
-
 
 pub async fn create_exercise(
     Extension(database): Extension<DatabaseConnection>,

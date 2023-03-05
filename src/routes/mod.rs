@@ -1,10 +1,10 @@
 // My custom routes
 mod create_exercise;
-mod get_one_exercise;
+mod get_exercises;
 mod hello_world;
 
 use create_exercise::create_exercise;
-use get_one_exercise::get_one_exercise;
+use get_exercises::{get_all_exercises, get_one_exercise};
 use hello_world::hello_world;
 
 use axum::http::Method;
@@ -38,5 +38,6 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .layer(Extension(shared_data))
         .route("/exercises", post(create_exercise))
         .route("/exercises/:exercise_id", get(get_one_exercise))
+        .route("/exercises", get(get_all_exercises))
         .layer(Extension(database))
 }

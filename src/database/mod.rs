@@ -3,6 +3,7 @@
 pub mod prelude;
 
 pub mod exercises;
+pub mod sea_orm_active_enums;
 pub mod tasks;
 pub mod users;
 pub mod workout_sets;
