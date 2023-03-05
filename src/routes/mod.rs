@@ -2,11 +2,13 @@
 mod create_exercise;
 mod create_workout_set;
 mod get_exercises;
+mod get_workout_sets;
 mod hello_world;
 
 use create_exercise::create_exercise;
 use create_workout_set::create_workout_set;
 use get_exercises::{get_all_exercises, get_one_exercise};
+use get_workout_sets::{get_all_workout_sets, get_one_workout_set};
 use hello_world::hello_world;
 
 use axum::http::Method;
@@ -39,6 +41,8 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .layer(cors)
         .layer(Extension(shared_data))
         .route("/sets", post(create_workout_set))
+        .route("/sets", get(get_all_workout_sets))
+        .route("/sets/:set_id", get(get_one_workout_set))
         .route("/exercises", post(create_exercise))
         .route("/exercises/:exercise_id", get(get_one_exercise))
         .route("/exercises", get(get_all_exercises))
