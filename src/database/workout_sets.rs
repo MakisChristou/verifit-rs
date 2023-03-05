@@ -2,18 +2,18 @@
 
 use sea_orm::entity::prelude::*;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "tasks")]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[sea_orm(table_name = "workout_sets")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub priority: Option<String>,
-    pub title: String,
-    pub completed_at: Option<DateTimeWithTimeZone>,
-    #[sea_orm(column_type = "Text", nullable)]
-    pub description: Option<String>,
-    pub deleted_at: Option<DateTimeWithTimeZone>,
-    pub is_default: Option<bool>,
+    pub date: Option<DateTimeWithTimeZone>,
+    pub exercise: String,
+    pub category: String,
+    pub reps: i32,
+    #[sea_orm(column_type = "Double")]
+    pub weight: f64,
+    pub comment: Option<String>,
     pub user_id: Option<i32>,
 }
 

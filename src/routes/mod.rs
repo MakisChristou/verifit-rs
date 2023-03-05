@@ -1,10 +1,10 @@
 // My custom routes
-mod create_task;
-mod get_one_task;
+mod create_exercise;
+mod get_one_exercise;
 mod hello_world;
 
-use create_task::create_task;
-use get_one_task::get_one_task;
+use create_exercise::create_exercise;
+use get_one_exercise::get_one_exercise;
 use hello_world::hello_world;
 
 use axum::http::Method;
@@ -36,7 +36,7 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .route("/", get(hello_world))
         .layer(cors)
         .layer(Extension(shared_data))
-        .route("/tasks", post(create_task))
-        .route("/tasks/:task_id", get(get_one_task))
+        .route("/exercises", post(create_exercise))
+        .route("/exercises/:exercise_id", get(get_one_exercise))
         .layer(Extension(database))
 }

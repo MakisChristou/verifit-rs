@@ -3,17 +3,14 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "tasks")]
+#[sea_orm(table_name = "exercises")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub priority: Option<String>,
-    pub title: String,
-    pub completed_at: Option<DateTimeWithTimeZone>,
-    #[sea_orm(column_type = "Text", nullable)]
-    pub description: Option<String>,
-    pub deleted_at: Option<DateTimeWithTimeZone>,
-    pub is_default: Option<bool>,
+    #[sea_orm(unique)]
+    pub name: String,
+    pub bodypart: String,
+    pub isfavorite: bool,
     pub user_id: Option<i32>,
 }
 

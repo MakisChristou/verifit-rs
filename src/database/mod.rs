@@ -2,5 +2,7 @@
 
 pub mod prelude;
 
+pub mod exercises;
 pub mod tasks;
 pub mod users;
+pub mod workout_sets;
