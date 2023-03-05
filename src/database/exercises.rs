@@ -4,7 +4,7 @@ use super::sea_orm_active_enums::Bodypart;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize, Eq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, DeriveEntityModel, Eq)]
 #[sea_orm(table_name = "exercises")]
 pub struct Model {
     #[sea_orm(primary_key)]

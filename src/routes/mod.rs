@@ -1,9 +1,11 @@
 // My custom routes
 mod create_exercise;
+mod create_workout_set;
 mod get_exercises;
 mod hello_world;
 
 use create_exercise::create_exercise;
+use create_workout_set::create_workout_set;
 use get_exercises::{get_all_exercises, get_one_exercise};
 use hello_world::hello_world;
 
@@ -36,6 +38,7 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .route("/", get(hello_world))
         .layer(cors)
         .layer(Extension(shared_data))
+        .route("/sets", post(create_workout_set))
         .route("/exercises", post(create_exercise))
         .route("/exercises/:exercise_id", get(get_one_exercise))
         .route("/exercises", get(get_all_exercises))
