@@ -1,6 +1,6 @@
 use dotenvy::dotenv;
 use dotenvy_macro::dotenv;
-use verifit_database::run;
+use verifit_rs::run;
 
 #[tokio::main]
 async fn main() {
