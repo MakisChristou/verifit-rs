@@ -13,7 +13,7 @@ pub struct RequestExercise {
     pub user_id: Option<i32>,
 }
 
-pub async fn atomic_update(
+pub async fn atomic_update_exercise(
     Path(execrise_id): Path<i32>,
     Extension(database): Extension<DatabaseConnection>,
     Json(request_exercise): Json<RequestExercise>,

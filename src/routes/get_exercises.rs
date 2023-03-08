@@ -7,7 +7,7 @@ use serde::Serialize;
 pub struct ResponseExercise {
     name: String,
     bodypart: Bodypart,
-    is_favorite: bool,
+    isfavorite: bool,
 }
 
 pub async fn get_one_exercise(
@@ -23,7 +23,7 @@ pub async fn get_one_exercise(
         return Ok(Json(ResponseExercise {
             name: exercise.name,
             bodypart: exercise.bodypart,
-            is_favorite: exercise.isfavorite,
+            isfavorite: exercise.isfavorite,
         }));
     }
 
@@ -41,7 +41,7 @@ pub async fn get_all_exercises(
         .map(|db_exercise| ResponseExercise {
             name: db_exercise.name,
             bodypart: db_exercise.bodypart,
-            is_favorite: db_exercise.isfavorite,
+            isfavorite: db_exercise.isfavorite,
         })
         .collect();
 

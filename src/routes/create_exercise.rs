@@ -16,7 +16,7 @@ pub struct RequestTask {
 pub struct RequestExercise {
     name: String,
     bodypart: Bodypart,
-    is_favorite: bool,
+    isfavorite: bool,
 }
 
 pub async fn create_exercise(
@@ -26,7 +26,7 @@ pub async fn create_exercise(
     let new_exercise = exercises::ActiveModel {
         name: Set(request_exercise.name),
         bodypart: Set(request_exercise.bodypart),
-        isfavorite: Set(request_exercise.is_favorite),
+        isfavorite: Set(request_exercise.isfavorite),
         ..Default::default()
     };
 
