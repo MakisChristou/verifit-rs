@@ -21,7 +21,7 @@ use get_workout_sets::{get_all_workout_sets, get_one_workout_set};
 use hello_world::hello_world;
 use update_exercises::atomic_update_exercise;
 use update_sets::atomic_update_set;
-use users::{create_user, login};
+use users::{create_user, login, logout};
 
 use axum::http::Method;
 use axum::middleware;
@@ -54,6 +54,7 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .layer(Extension(shared_data))
         .route("/users", post(create_user))
         .route("/users/login", post(login))
+        .route("/users/logout", post(logout))
         .route("/sets", post(create_workout_set))
         .route("/sets", get(get_all_workout_sets))
         .route("/sets/:set_id", get(get_one_workout_set))
