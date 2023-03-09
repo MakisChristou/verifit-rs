@@ -8,6 +8,7 @@ pub struct ResponseExercise {
     name: String,
     bodypart: Bodypart,
     isfavorite: bool,
+    user_id: Option<i32>,
 }
 
 pub async fn get_one_exercise(
@@ -24,6 +25,7 @@ pub async fn get_one_exercise(
             name: exercise.name,
             bodypart: exercise.bodypart,
             isfavorite: exercise.isfavorite,
+            user_id: exercise.user_id,
         }));
     }
 
@@ -42,6 +44,7 @@ pub async fn get_all_exercises(
             name: db_exercise.name,
             bodypart: db_exercise.bodypart,
             isfavorite: db_exercise.isfavorite,
+            user_id: db_exercise.user_id,
         })
         .collect();
 
