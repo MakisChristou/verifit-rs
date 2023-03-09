@@ -1,6 +1,5 @@
 // My custom routes
 mod create_exercise;
-mod create_user;
 mod create_workout_set;
 mod delete_exercise;
 mod delete_set;
@@ -9,11 +8,11 @@ mod get_workout_sets;
 mod hello_world;
 mod update_exercises;
 mod update_sets;
+mod users;
 
 use axum::routing::delete;
 use axum::routing::put;
 use create_exercise::create_exercise;
-use create_user::create_user;
 use create_workout_set::create_workout_set;
 use delete_exercise::delete_exercise;
 use delete_set::delete_set;
@@ -22,6 +21,7 @@ use get_workout_sets::{get_all_workout_sets, get_one_workout_set};
 use hello_world::hello_world;
 use update_exercises::atomic_update_exercise;
 use update_sets::atomic_update_set;
+use users::{create_user, login};
 
 use axum::http::Method;
 use axum::middleware;
@@ -53,6 +53,7 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .layer(cors)
         .layer(Extension(shared_data))
         .route("/users", post(create_user))
+        .route("/users/login", post(login))
         .route("/sets", post(create_workout_set))
         .route("/sets", get(get_all_workout_sets))
         .route("/sets/:set_id", get(get_one_workout_set))
