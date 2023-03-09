@@ -1,5 +1,5 @@
-use crate::database::users;
 use crate::database::users::Entity as Users;
+use crate::database::users::{self, Model};
 use axum::headers::authorization::Bearer;
 use axum::headers::Authorization;
 use axum::TypedHeader;
@@ -78,21 +78,10 @@ pub async fn login(
 }
 
 pub async fn logout(
-    authorization: TypedHeader<Authorization<Bearer>>,
     Extension(database): Extension<DatabaseConnection>,
+    Extension(user): Extension<Model>,
 ) -> Result<(), StatusCode> {
-    let token = authorization.token();
-
-    let mut user = if let Some(user) = Users::find()
-        .filter(users::Column::Token.eq(Some(token)))
-        .one(&database)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-    {
-        user.into_active_model()
-    } else {
-        return Err(StatusCode::UNAUTHORIZED);
-    };
+    let mut user = user.into_active_model();
 
     user.token = Set(None);
     user.save(&database)

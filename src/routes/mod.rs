@@ -5,6 +5,7 @@ mod delete_exercise;
 mod delete_set;
 mod get_exercises;
 mod get_workout_sets;
+mod guard;
 mod hello_world;
 mod update_exercises;
 mod update_sets;
@@ -18,6 +19,7 @@ use delete_exercise::delete_exercise;
 use delete_set::delete_set;
 use get_exercises::{get_all_exercises, get_one_exercise};
 use get_workout_sets::{get_all_workout_sets, get_one_workout_set};
+use guard::guard;
 use hello_world::hello_world;
 use update_exercises::atomic_update_exercise;
 use update_sets::atomic_update_set;
@@ -49,12 +51,13 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
     };
 
     Router::new()
+        .route("/users/logout", post(logout))
+        .route_layer(middleware::from_fn(guard))
         .route("/", get(hello_world))
         .layer(cors)
         .layer(Extension(shared_data))
         .route("/users", post(create_user))
         .route("/users/login", post(login))
-        .route("/users/logout", post(logout))
         .route("/sets", post(create_workout_set))
         .route("/sets", get(get_all_workout_sets))
         .route("/sets/:set_id", get(get_one_workout_set))
