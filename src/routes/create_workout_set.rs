@@ -39,7 +39,7 @@ pub async fn create_workout_set(
     {
         user
     } else {
-        return Err(StatusCode::NETWORK_AUTHENTICATION_REQUIRED);
+        return Err(StatusCode::UNAUTHORIZED);
     };
 
     let new_workout_set = workout_sets::ActiveModel {
