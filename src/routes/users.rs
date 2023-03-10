@@ -95,7 +95,7 @@ pub async fn logout(
 }
 
 fn hash_password(password: String) -> Result<String, StatusCode> {
-    bcrypt::hash(password, 14).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    bcrypt::hash(password, 10).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
 fn verify_password(password: String, hash: &str) -> Result<bool, StatusCode> {
