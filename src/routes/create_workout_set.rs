@@ -1,18 +1,18 @@
 use std::sync::Barrier;
 
 use crate::database::sea_orm_active_enums::Bodypart;
-use crate::database::users::{self, Model};
 use crate::database::users::Entity as Users;
+use crate::database::users::{self, Model};
 use crate::database::workout_sets;
 use axum::headers::authorization::Bearer;
 use axum::headers::Authorization;
 use axum::http::StatusCode;
 use axum::{Extension, Json, TypedHeader};
-use sea_orm::{ColumnTrait, IntoActiveModel};
 use sea_orm::EntityTrait;
 use sea_orm::QueryFilter;
 use sea_orm::{prelude::DateTimeWithTimeZone, DatabaseConnection};
 use sea_orm::{ActiveModelTrait, Set};
+use sea_orm::{ColumnTrait, IntoActiveModel};
 use serde::Deserialize;
 
 #[derive(Deserialize)]

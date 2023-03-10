@@ -1,8 +1,13 @@
-use axum::{extract::Path, http::StatusCode, Extension, Json};
-use sea_orm::{prelude::DateTimeWithTimeZone, DatabaseConnection, EntityTrait};
-use serde::{Deserialize, Serialize};
-
+use crate::database::users;
+use crate::database::users::Entity as Users;
+use crate::database::users::Model;
+use crate::database::workout_sets;
 use crate::database::{sea_orm_active_enums::Bodypart, workout_sets::Entity as WorkoutSets};
+use axum::{extract::Path, http::StatusCode, Extension, Json};
+use sea_orm::ColumnTrait;
+use sea_orm::QueryFilter;
+use sea_orm::{prelude::DateTimeWithTimeZone, DatabaseConnection, EntityTrait, IntoActiveModel};
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
 pub struct ResponseWorkoutSet {
@@ -16,10 +21,14 @@ pub struct ResponseWorkoutSet {
 }
 
 pub async fn get_one_workout_set(
+    Extension(user): Extension<Model>,
     Path(set_id): Path<i32>,
     Extension(database): Extension<DatabaseConnection>,
 ) -> Result<Json<ResponseWorkoutSet>, StatusCode> {
+    let user = user.into_active_model();
+
     let workout_set = WorkoutSets::find_by_id(set_id)
+        .filter(workout_sets::Column::UserId.eq(user.id.unwrap()))
         .one(&database)
         .await
         .unwrap();
@@ -40,9 +49,13 @@ pub async fn get_one_workout_set(
 }
 
 pub async fn get_all_workout_sets(
+    Extension(user): Extension<Model>,
     Extension(database): Extension<DatabaseConnection>,
 ) -> Result<Json<Vec<ResponseWorkoutSet>>, StatusCode> {
+    let user = user.into_active_model();
+
     let workout_sets = WorkoutSets::find()
+        .filter(workout_sets::Column::UserId.eq(user.id.unwrap()))
         .all(&database)
         .await
         .map_err(|_error| StatusCode::INTERNAL_SERVER_ERROR)?
