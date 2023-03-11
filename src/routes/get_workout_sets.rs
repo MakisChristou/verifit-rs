@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
 pub struct ResponseWorkoutSet {
+    pub id: i32,
     pub date: DateTimeWithTimeZone,
     pub exercise_name: String,
     pub category: Bodypart,
@@ -35,6 +36,7 @@ pub async fn get_one_workout_set(
 
     if let Some(workout_set) = workout_set {
         return Ok(Json(ResponseWorkoutSet {
+            id: workout_set.id,
             date: workout_set.date,
             exercise_name: workout_set.exercise_name,
             category: workout_set.category,
@@ -61,6 +63,7 @@ pub async fn get_all_workout_sets(
         .map_err(|_error| StatusCode::INTERNAL_SERVER_ERROR)?
         .into_iter()
         .map(|db_workout_set| ResponseWorkoutSet {
+            id: db_workout_set.id,
             date: db_workout_set.date,
             exercise_name: db_workout_set.exercise_name,
             category: db_workout_set.category,

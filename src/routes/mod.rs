@@ -56,6 +56,8 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .route("/sets", post(create_workout_set))
         .route("/sets", get(get_all_workout_sets))
         .route("/sets/:set_id", get(get_one_workout_set))
+        .route("/exercises", get(get_all_exercises))
+        .route("/exercises/:exercise_id", get(get_one_exercise))
         .route_layer(middleware::from_fn(guard))
         .route("/", get(hello_world))
         .layer(cors)
@@ -64,8 +66,7 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .route("/users/login", post(login))
         .route("/sets/:set_id", delete(delete_set))
         .route("/sets/:set_id", put(atomic_update_set))
-        .route("/exercises/:exercise_id", get(get_one_exercise))
-        .route("/exercises", get(get_all_exercises))
+        
         .route("/exercises/:exercise_id", put(atomic_update_exercise))
         .route("/exercises/:exercise_id", delete(delete_exercise))
         .layer(Extension(database))
