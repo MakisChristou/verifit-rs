@@ -15,7 +15,7 @@ pub struct Claims {
 pub fn create_jwt() -> Result<String, StatusCode> {
     let mut now = Utc::now();
     let iat = now.timestamp() as usize;
-    let expires_in = Duration::seconds(60 * 60);
+    let expires_in = Duration::seconds(60 * 60 * 24 * 3); // tokens last for 3 days
     now += expires_in;
     let exp = now.timestamp() as usize;
 

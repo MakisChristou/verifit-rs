@@ -23,7 +23,6 @@ pub async fn get_one_exercise(
     Path(exercise_id): Path<i32>,
     Extension(database): Extension<DatabaseConnection>,
 ) -> Result<Json<ResponseExercise>, StatusCode> {
-
     let user = user.into_active_model();
 
     let exercise = Exercises::find_by_id(exercise_id)
