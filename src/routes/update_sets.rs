@@ -1,6 +1,7 @@
+use crate::database::users::Model;
 use crate::database::{sea_orm_active_enums::Bodypart, workout_sets, workout_sets::Entity as Sets};
 use axum::{extract::Path, http::StatusCode, Extension, Json};
-use sea_orm::ColumnTrait;
+use sea_orm::{ColumnTrait, IntoActiveModel};
 use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, Set};
 use serde::{Deserialize, Serialize};
 
@@ -15,10 +16,13 @@ pub struct RequestWorkoutSet {
 }
 
 pub async fn atomic_update_set(
+    Extension(user): Extension<Model>,
     Path(set_id): Path<i32>,
     Extension(database): Extension<DatabaseConnection>,
     Json(request_set): Json<RequestWorkoutSet>,
 ) -> Result<(), StatusCode> {
+    let user = user.into_active_model();
+
     let update_set = workout_sets::ActiveModel {
         id: Set(set_id),
         exercise_name: Set(request_set.exercise_name),
@@ -30,6 +34,7 @@ pub async fn atomic_update_set(
     };
 
     Sets::update(update_set)
+        .filter(workout_sets::Column::UserId.eq(user.id.unwrap()))
         .filter(workout_sets::Column::Id.eq(set_id))
         .exec(&database)
         .await
