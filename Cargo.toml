@@ -14,3 +14,5 @@ axum = { version = "0.6.10", features = ["headers"] }
 serde = { version = "1.0.152", features = ["derive"] }
 tower-http = { version = "0.4.0", features = ["cors"] }
 bcrypt = "0.14.0"
+jsonwebtoken = "8.2.0"
+chrono = "0.4.23"
