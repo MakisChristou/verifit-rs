@@ -5,6 +5,7 @@ use axum::headers::authorization::Bearer;
 use axum::headers::Authorization;
 use axum::TypedHeader;
 use axum::{http::StatusCode, Extension, Json};
+use regex::Regex;
 use sea_orm::ColumnTrait;
 use sea_orm::EntityTrait;
 use sea_orm::IntoActiveModel;
@@ -12,23 +13,37 @@ use sea_orm::QueryFilter;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, Set};
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct RequestUser {
     username: String,
     password: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ResponseUser {
     username: String,
     id: i32,
     token: Option<String>,
 }
 
+fn is_email_valid(email: &str) -> bool {
+    let email_regex = Regex::new(r"(?i)^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$").unwrap();
+    email_regex.is_match(email)
+}
+
+fn is_valid_password(password: &str) -> bool
+{
+    return password.len() > 8
+}
+
 pub async fn create_user(
     Extension(database): Extension<DatabaseConnection>,
     Json(request_user): Json<RequestUser>,
 ) -> Result<Json<ResponseUser>, StatusCode> {
+    if !is_email_valid(&request_user.username) || !is_valid_password(&request_user.password){
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
     let jwt = create_jwt()?;
 
     let new_user = users::ActiveModel {

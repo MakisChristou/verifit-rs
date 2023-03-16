@@ -47,7 +47,5 @@ pub async fn create_exercise(
 
     let result = new_exercise.save(&database).await.unwrap();
 
-    dbg!(result);
-
     Ok(())
 }
