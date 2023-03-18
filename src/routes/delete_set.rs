@@ -1,6 +1,7 @@
 use crate::database::{
     sea_orm_active_enums::Bodypart, users::Model, workout_sets, workout_sets::Entity as Sets,
 };
+use axum::Json;
 use axum::{extract::Path, http::StatusCode, Extension};
 use sea_orm::ColumnTrait;
 use sea_orm::QueryFilter;
@@ -25,6 +26,23 @@ pub async fn delete_set(
     };
 
     Sets::delete(set)
+        .exec(&database)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(())
+}
+
+pub async fn delete_sets(
+    Extension(user): Extension<Model>,
+    Extension(database): Extension<DatabaseConnection>,
+    Json(set_ids): Json<Vec<i32>>,
+) -> Result<(), StatusCode> {
+    let user_id = user.into_active_model().id.unwrap();
+
+    Sets::delete_many()
+        .filter(workout_sets::Column::UserId.eq(user_id))
+        .filter(workout_sets::Column::Id.is_in(set_ids))
         .exec(&database)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

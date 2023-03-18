@@ -31,16 +31,15 @@ fn is_email_valid(email: &str) -> bool {
     email_regex.is_match(email)
 }
 
-fn is_valid_password(password: &str) -> bool
-{
-    return password.len() > 8
+fn is_valid_password(password: &str) -> bool {
+    return password.len() > 8;
 }
 
 pub async fn create_user(
     Extension(database): Extension<DatabaseConnection>,
     Json(request_user): Json<RequestUser>,
 ) -> Result<Json<ResponseUser>, StatusCode> {
-    if !is_email_valid(&request_user.username) || !is_valid_password(&request_user.password){
+    if !is_email_valid(&request_user.username) || !is_valid_password(&request_user.password) {
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
 

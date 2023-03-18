@@ -14,9 +14,9 @@ mod users;
 use axum::routing::delete;
 use axum::routing::put;
 use create_exercise::create_exercise;
-use create_workout_set::create_workout_set;
+use create_workout_set::{create_workout_set, create_workout_sets};
 use delete_exercise::delete_exercise;
-use delete_set::delete_set;
+use delete_set::{delete_set, delete_sets};
 use get_exercises::{get_all_exercises, get_one_exercise};
 use get_workout_sets::{get_all_workout_sets, get_one_workout_set};
 use guard::guard;
@@ -54,6 +54,8 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .route("/users/logout", post(logout))
         .route("/exercises", post(create_exercise))
         .route("/sets", post(create_workout_set))
+        .route("/sets/bulk", post(create_workout_sets))
+        .route("/sets/bulk", delete(delete_sets))
         .route("/sets", get(get_all_workout_sets))
         .route("/sets/:set_id", get(get_one_workout_set))
         .route("/exercises", get(get_all_exercises))
