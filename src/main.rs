@@ -7,5 +7,7 @@ async fn main() {
     dotenv().ok();
     let database_uri = dotenv!("DATABASE_URL");
 
+    println!("Connecting to : {:?}", database_uri);
+
     run(database_uri).await;
 }

@@ -10,7 +10,7 @@ pub async fn run(database_uri: &str) {
 
     let app = create_routes(database.unwrap()).await;
 
-    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
+    axum::Server::bind(&"0.0.0.0:3001".parse().unwrap())
         .serve(app.into_make_service())
         .await
         .unwrap();

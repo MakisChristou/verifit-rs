@@ -32,7 +32,30 @@ fn is_email_valid(email: &str) -> bool {
 }
 
 fn is_valid_password(password: &str) -> bool {
-    return password.len() > 8;
+    // Check if the password is at least 8 characters long
+    if password.len() < 8 {
+        return false;
+    }
+
+    // Check if the password contains at least one letter and one number
+    let mut has_letter = false;
+    let mut has_number = false;
+
+    for ch in password.chars() {
+        if ch.is_alphabetic() {
+            has_letter = true;
+        } else if ch.is_numeric() {
+            has_number = true;
+        }
+
+        // If both conditions are met, return true
+        if has_letter && has_number {
+            return true;
+        }
+    }
+
+    // If either condition is not met, return false
+    false
 }
 
 pub async fn create_user(
@@ -40,7 +63,7 @@ pub async fn create_user(
     Json(request_user): Json<RequestUser>,
 ) -> Result<Json<ResponseUser>, StatusCode> {
     if !is_email_valid(&request_user.username) || !is_valid_password(&request_user.password) {
-        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        return Err(StatusCode::BAD_REQUEST);
     }
 
     let jwt = create_jwt()?;
