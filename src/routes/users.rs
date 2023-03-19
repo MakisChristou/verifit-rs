@@ -5,6 +5,7 @@ use axum::headers::authorization::Bearer;
 use axum::headers::Authorization;
 use axum::TypedHeader;
 use axum::{http::StatusCode, Extension, Json};
+use log::{error, info, warn};
 use regex::Regex;
 use sea_orm::ColumnTrait;
 use sea_orm::EntityTrait;
@@ -28,12 +29,18 @@ pub struct ResponseUser {
 
 fn is_email_valid(email: &str) -> bool {
     let email_regex = Regex::new(r"(?i)^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$").unwrap();
-    email_regex.is_match(email)
+    if !email_regex.is_match(email) {
+        warn!("email invalid");
+        return false;
+    } else {
+        return true;
+    }
 }
 
 fn is_valid_password(password: &str) -> bool {
     // Check if the password is at least 8 characters long
     if password.len() < 8 {
+        warn!("password invalid");
         return false;
     }
 
@@ -55,6 +62,7 @@ fn is_valid_password(password: &str) -> bool {
     }
 
     // If either condition is not met, return false
+    warn!("password invalid");
     false
 }
 
@@ -62,6 +70,11 @@ pub async fn create_user(
     Extension(database): Extension<DatabaseConnection>,
     Json(request_user): Json<RequestUser>,
 ) -> Result<Json<ResponseUser>, StatusCode> {
+    warn!(
+        "create_user attempt with username: {}",
+        request_user.username.to_string()
+    );
+
     if !is_email_valid(&request_user.username) || !is_valid_password(&request_user.password) {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -76,7 +89,12 @@ pub async fn create_user(
     }
     .save(&database)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|err| {
+        error!("error saving the new user: {}", err);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    warn!("create user sucessful");
 
     Ok(Json(ResponseUser {
         username: new_user.username.unwrap(),
@@ -89,14 +107,22 @@ pub async fn login(
     Extension(database): Extension<DatabaseConnection>,
     Json(request_user): Json<RequestUser>,
 ) -> Result<Json<ResponseUser>, StatusCode> {
+    warn!("login attempt with email: {}", {
+        request_user.username.to_string()
+    });
+
     let db_user = Users::find()
         .filter(users::Column::Username.eq(request_user.username))
         .one(&database)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|err| {
+            error!("error finding the user {}", err);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     if let Some(db_user) = db_user {
         if !verify_password(request_user.password, &db_user.password)? {
+            warn!("user unauthorized");
             return Err(StatusCode::UNAUTHORIZED);
         }
         let jwt = create_jwt()?;
@@ -105,10 +131,12 @@ pub async fn login(
 
         user.token = Set(Some(new_token));
 
-        let saved_user = user
-            .save(&database)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let saved_user = user.save(&database).await.map_err(|err| {
+            error!("error saving the new user: {}", err);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+        warn!("login succesful");
 
         // do the login here
         Ok(Json(ResponseUser {
@@ -117,6 +145,7 @@ pub async fn login(
             token: Some(saved_user.token.unwrap().unwrap()),
         }))
     } else {
+        warn!("login unsucesasful");
         Err(StatusCode::NOT_FOUND)
     }
 }
@@ -125,13 +154,17 @@ pub async fn logout(
     Extension(database): Extension<DatabaseConnection>,
     Extension(user): Extension<Model>,
 ) -> Result<(), StatusCode> {
+    warn!("logout attempt with email {}", user.username.to_string());
+
     let mut user = user.into_active_model();
 
     user.token = Set(None);
-    user.save(&database)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    user.save(&database).await.map_err(|err| {
+        error!("error saving user {}", err);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
+    warn!("logout succesful");
     Ok(())
 }
 
