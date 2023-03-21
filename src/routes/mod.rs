@@ -22,7 +22,7 @@ use get_workout_sets::{get_all_workout_sets, get_one_workout_set};
 use guard::guard;
 use hello_world::hello_world;
 use update_exercises::atomic_update_exercise;
-use update_sets::atomic_update_set;
+use update_sets::{atomic_update_set, atomic_update_sets};
 use users::{create_user, login, logout};
 
 use axum::http::Method;
@@ -56,6 +56,7 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .route("/sets", post(create_workout_set))
         .route("/sets/bulk", post(create_workout_sets))
         .route("/sets/bulk", delete(delete_sets))
+        .route("/sets/bulk", put(atomic_update_sets))
         .route("/sets", get(get_all_workout_sets))
         .route("/sets/:set_id", get(get_one_workout_set))
         // .route("/exercises", get(get_all_exercises))

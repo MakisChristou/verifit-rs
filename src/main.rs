@@ -14,7 +14,7 @@ async fn main() {
     let log_file = OpenOptions::new()
         .append(true)
         .create(true)
-        .open("verifit-rs.log")
+        .open("/var/log/verifit-rs/verifit-rs.log")
         .expect("Unable to create or open log file");
 
     WriteLogger::init(LevelFilter::Warn, Config::default(), log_file)
