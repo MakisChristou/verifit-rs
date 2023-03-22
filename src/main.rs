@@ -17,8 +17,10 @@ async fn main() {
         .open("/var/log/verifit-rs/verifit-rs.log")
         .expect("Unable to create or open log file");
 
-    WriteLogger::init(LevelFilter::Warn, Config::default(), log_file)
-        .expect("Unable to initialize logger");
+    // Create a custom ConfigBuilder and set the time_format to include date and time.
+    let config = ConfigBuilder::new().set_time_format_rfc2822().build();
+
+    WriteLogger::init(LevelFilter::Warn, config, log_file).expect("Unable to initialize logger");
 
     // Log a message.
     warn!("Starting the server");
