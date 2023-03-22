@@ -1,9 +1,9 @@
 use crate::database::users::Model;
 use crate::database::{sea_orm_active_enums::Bodypart, workout_sets, workout_sets::Entity as Sets};
 use axum::{extract::Path, http::StatusCode, Extension, Json};
-use sea_orm::{ColumnTrait, DbErr, IntoActiveModel, TransactionTrait};
+use sea_orm::{ColumnTrait, IntoActiveModel, TransactionTrait};
 use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, Set};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct RequestWorkoutSet {

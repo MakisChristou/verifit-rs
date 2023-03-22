@@ -1,11 +1,12 @@
 use crate::database::users::Entity as Users;
 use crate::database::users::{self, Model};
 use crate::utils::jwt::create_jwt;
-use axum::headers::authorization::Bearer;
-use axum::headers::Authorization;
-use axum::TypedHeader;
 use axum::{http::StatusCode, Extension, Json};
-use log::{error, info, warn};
+use dotenvy_macro::dotenv;
+use lettre::message::header::ContentType;
+use lettre::transport::smtp::authentication::Credentials;
+use lettre::{Message, SmtpTransport, Transport};
+use log::{error, warn};
 use regex::Regex;
 use sea_orm::ColumnTrait;
 use sea_orm::EntityTrait;
@@ -27,6 +28,12 @@ pub struct ResponseUser {
     token: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RequestPasswordResetUser {
+    username: String,
+}
+
+
 fn is_email_valid(email: &str) -> bool {
     let email_regex = Regex::new(r"(?i)^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$").unwrap();
     if !email_regex.is_match(email) {
@@ -39,7 +46,7 @@ fn is_email_valid(email: &str) -> bool {
 
 fn is_valid_password(password: &str) -> bool {
     // Check if the password is at least 8 characters long
-    if password.len() < 8 {
+    if password.len() < 8 && password.len() > 128{
         warn!("password invalid");
         return false;
     }
@@ -166,6 +173,95 @@ pub async fn logout(
 
     warn!("logout succesful");
     Ok(())
+}
+
+pub async fn request_password_reset(
+    Extension(database): Extension<DatabaseConnection>,
+    Json(password_reset_user): Json<RequestPasswordResetUser>,
+)-> Result<(), StatusCode>{    
+    warn!("request_password_reset email {}", password_reset_user.username);
+
+    // Check if username is in database
+    let mut db_user = Users::find()
+        .filter(users::Column::Username.eq(password_reset_user.username))
+        .one(&database)
+        .await
+        .map_err(|err| {
+            error!("error finding the user {}", err);
+            StatusCode::NOT_FOUND
+        })?;
+
+    let mut user = match db_user {
+            Some(user) => user.into_active_model(),
+            None => return Err(StatusCode::NOT_FOUND),
+        };
+
+    user.token = Set(None);
+    let jwt = create_jwt()?;
+    let new_reset_code = String::from(jwt);
+    user.reset_code = Set(Some(new_reset_code.clone()));
+    
+    let recipient_email = user.username.clone().unwrap();
+
+    user.save(&database).await.map_err(|err| {
+        error!("error saving the new user: {}", err);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    // Send the recovery email
+    if let Ok(()) = send_reset_email(new_reset_code, recipient_email).await {
+        return Ok(());
+    } else {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+}
+
+pub async fn change_password(
+    Extension(database): Extension<DatabaseConnection>,
+    Json(request_user): Json<RequestUser>,
+)-> Result<(), StatusCode>{
+
+    // Check if username is in database
+    // Check if user has password reset code and not expired
+    // Change the user's password
+
+    Ok(())
+}
+
+async fn send_reset_email(new_reset_code: String, username: String)
+ -> Result<(), StatusCode>{
+
+    let email_username: &'static str = dotenv!("EMAIL_USERNAME");
+    let email_password: &'static str = dotenv!("EMAIL_PASSWORD");
+    let smtp_server: &'static str = dotenv!("SMTP_SERVER");
+
+    let email = Message::builder()
+    .from(format!("<{}>", email_username).parse().unwrap())
+    .to(format!("<{}>", username).parse().unwrap())
+    .subject("Password Reset Code")
+    .header(ContentType::TEXT_PLAIN)
+    .body(new_reset_code)
+    .unwrap();
+
+    let creds = Credentials::new(email_username.to_owned(), email_password.to_owned());
+
+    // Open a remote connection to gmail
+    let mailer = SmtpTransport::relay(smtp_server)
+        .unwrap()
+        .credentials(creds)
+        .build();
+
+    // Send the email
+    match mailer.send(&email) {
+        Ok(_) => {
+            warn!("Email sent successfully!");
+            Ok(())
+        },
+        Err(e) => {
+            warn!("Could not send email: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        },
+    }
 }
 
 fn hash_password(password: String) -> Result<String, StatusCode> {

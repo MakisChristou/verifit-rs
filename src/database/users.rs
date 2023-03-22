@@ -13,14 +13,14 @@ pub struct Model {
     pub deleted_at: Option<DateTimeWithTimeZone>,
     #[sea_orm(column_type = "Text", nullable)]
     pub token: Option<String>,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub reset_code: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(has_many = "super::exercises::Entity")]
     Exercises,
-    #[sea_orm(has_many = "super::tasks::Entity")]
-    Tasks,
     #[sea_orm(has_many = "super::workout_sets::Entity")]
     WorkoutSets,
 }
@@ -28,12 +28,6 @@ pub enum Relation {
 impl Related<super::exercises::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Exercises.def()
-    }
-}
-
-impl Related<super::tasks::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Tasks.def()
     }
 }
 

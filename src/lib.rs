@@ -2,7 +2,7 @@ use sea_orm::Database;
 mod database;
 mod routes;
 mod utils;
-use log::{info, warn};
+use log::warn;
 
 use routes::create_routes;
 

@@ -23,7 +23,7 @@ use guard::guard;
 use hello_world::hello_world;
 use update_exercises::atomic_update_exercise;
 use update_sets::{atomic_update_set, atomic_update_sets};
-use users::{create_user, login, logout};
+use users::{change_password, create_user, login, logout, request_password_reset};
 
 use axum::http::Method;
 use axum::middleware;
@@ -59,13 +59,11 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .route("/sets/bulk", put(atomic_update_sets))
         .route("/sets", get(get_all_workout_sets))
         .route("/sets/:set_id", get(get_one_workout_set))
-        // .route("/exercises", get(get_all_exercises))
-        // .route("/exercises/:exercise_id", get(get_one_exercise))
         .route("/sets/:set_id", delete(delete_set))
-        // .route("/exercises/:exercise_id", delete(delete_exercise))
         .route("/sets/:set_id", put(atomic_update_set))
-        // .route("/exercises/:exercise_id", put(atomic_update_exercise))
         .route_layer(middleware::from_fn(guard))
+        .route("/users/request-password-reset", post(request_password_reset))
+        .route("/users/change_password", post(change_password))
         .route("/", get(hello_world))
         .layer(cors)
         .layer(Extension(shared_data))

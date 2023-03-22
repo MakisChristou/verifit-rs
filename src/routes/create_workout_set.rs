@@ -1,5 +1,3 @@
-use std::sync::Barrier;
-
 use crate::database::sea_orm_active_enums::Bodypart;
 use crate::database::users::Entity as Users;
 use crate::database::users::{self, Model};
@@ -14,6 +12,7 @@ use sea_orm::{prelude::DateTimeWithTimeZone, DatabaseConnection};
 use sea_orm::{ActiveModelTrait, Set};
 use sea_orm::{ColumnTrait, IntoActiveModel};
 use serde::Deserialize;
+use std::sync::Barrier;
 
 #[derive(Deserialize)]
 pub struct RequestWorkoutSet {
@@ -45,7 +44,7 @@ pub async fn create_workout_set(
 
     let result = new_workout_set.save(&database).await.unwrap();
 
-    Ok((Json(result.id.unwrap())))
+    Ok(Json(result.id.unwrap()))
 }
 
 pub async fn create_workout_sets(
