@@ -12,8 +12,7 @@ pub struct Claims {
     iat: usize,
 }
 
-pub fn create_jwt() -> Result<String, StatusCode> {
-    let expiration_duration: &'static str = dotenv!("TOKEN_EXPIRATION"); // in seconds
+pub fn create_jwt(expiration_duration: &'static str) -> Result<String, StatusCode> {
     let mut now = Utc::now();
     let iat = now.timestamp() as usize;
     let expires_in = Duration::seconds(expiration_duration.parse().unwrap());

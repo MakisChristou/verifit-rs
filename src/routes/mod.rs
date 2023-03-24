@@ -62,7 +62,10 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .route("/sets/:set_id", delete(delete_set))
         .route("/sets/:set_id", put(atomic_update_set))
         .route_layer(middleware::from_fn(guard))
-        .route("/users/request-password-reset", post(request_password_reset))
+        .route(
+            "/users/request-password-reset",
+            post(request_password_reset),
+        )
         .route("/users/change_password", post(change_password))
         .route("/", get(hello_world))
         .layer(cors)

@@ -33,7 +33,6 @@ pub struct RequestPasswordResetUser {
     username: String,
 }
 
-
 fn is_email_valid(email: &str) -> bool {
     let email_regex = Regex::new(r"(?i)^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$").unwrap();
     if !email_regex.is_match(email) {
@@ -46,7 +45,7 @@ fn is_email_valid(email: &str) -> bool {
 
 fn is_valid_password(password: &str) -> bool {
     // Check if the password is at least 8 characters long
-    if password.len() < 8 && password.len() > 128{
+    if password.len() < 8 && password.len() > 128 {
         warn!("password invalid");
         return false;
     }
@@ -85,8 +84,8 @@ pub async fn create_user(
     if !is_email_valid(&request_user.username) || !is_valid_password(&request_user.password) {
         return Err(StatusCode::BAD_REQUEST);
     }
-
-    let jwt = create_jwt()?;
+    let expiration_duration: &'static str = dotenv!("TOKEN_EXPIRATION"); // in seconds
+    let jwt = create_jwt(expiration_duration)?;
 
     let new_user = users::ActiveModel {
         username: Set(request_user.username),
@@ -132,7 +131,8 @@ pub async fn login(
             warn!("user unauthorized");
             return Err(StatusCode::UNAUTHORIZED);
         }
-        let jwt = create_jwt()?;
+        let expiration_duration: &'static str = dotenv!("TOKEN_EXPIRATION"); // in seconds
+        let jwt = create_jwt(expiration_duration)?;
         let new_token = String::from(jwt);
         let mut user = db_user.into_active_model();
 
@@ -178,8 +178,11 @@ pub async fn logout(
 pub async fn request_password_reset(
     Extension(database): Extension<DatabaseConnection>,
     Json(password_reset_user): Json<RequestPasswordResetUser>,
-)-> Result<(), StatusCode>{    
-    warn!("request_password_reset email {}", password_reset_user.username);
+) -> Result<(), StatusCode> {
+    warn!(
+        "request_password_reset email {}",
+        password_reset_user.username
+    );
 
     // Check if username is in database
     let mut db_user = Users::find()
@@ -192,15 +195,16 @@ pub async fn request_password_reset(
         })?;
 
     let mut user = match db_user {
-            Some(user) => user.into_active_model(),
-            None => return Err(StatusCode::NOT_FOUND),
-        };
+        Some(user) => user.into_active_model(),
+        None => return Err(StatusCode::NOT_FOUND),
+    };
 
     user.token = Set(None);
-    let jwt = create_jwt()?;
+    let expiration_duration: &'static str = dotenv!("PASSWORD_RESET_EXPIRATION");
+    let jwt = create_jwt(expiration_duration)?;
     let new_reset_code = String::from(jwt);
     user.reset_code = Set(Some(new_reset_code.clone()));
-    
+
     let recipient_email = user.username.clone().unwrap();
 
     user.save(&database).await.map_err(|err| {
@@ -219,29 +223,28 @@ pub async fn request_password_reset(
 pub async fn change_password(
     Extension(database): Extension<DatabaseConnection>,
     Json(request_user): Json<RequestUser>,
-)-> Result<(), StatusCode>{
-
+) -> Result<(), StatusCode> {
     // Check if username is in database
     // Check if user has password reset code and not expired
+    // Check if hashed reset code matches the one sent by user
+    // Check if new password is valid
     // Change the user's password
 
     Ok(())
 }
 
-async fn send_reset_email(new_reset_code: String, username: String)
- -> Result<(), StatusCode>{
-
+async fn send_reset_email(new_reset_code: String, username: String) -> Result<(), StatusCode> {
     let email_username: &'static str = dotenv!("EMAIL_USERNAME");
     let email_password: &'static str = dotenv!("EMAIL_PASSWORD");
     let smtp_server: &'static str = dotenv!("SMTP_SERVER");
 
     let email = Message::builder()
-    .from(format!("<{}>", email_username).parse().unwrap())
-    .to(format!("<{}>", username).parse().unwrap())
-    .subject("Password Reset Code")
-    .header(ContentType::TEXT_PLAIN)
-    .body(new_reset_code)
-    .unwrap();
+        .from(format!("<{}>", email_username).parse().unwrap())
+        .to(format!("<{}>", username).parse().unwrap())
+        .subject("Password Reset Code")
+        .header(ContentType::TEXT_PLAIN)
+        .body(new_reset_code)
+        .unwrap();
 
     let creds = Credentials::new(email_username.to_owned(), email_password.to_owned());
 
@@ -256,11 +259,11 @@ async fn send_reset_email(new_reset_code: String, username: String)
         Ok(_) => {
             warn!("Email sent successfully!");
             Ok(())
-        },
+        }
         Err(e) => {
             warn!("Could not send email: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
-        },
+        }
     }
 }
 
