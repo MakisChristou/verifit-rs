@@ -66,7 +66,7 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
             "/users/request-password-reset",
             post(request_password_reset),
         )
-        .route("/users/change_password", post(change_password))
+        .route("/users/change-password", post(change_password))
         .route("/", get(hello_world))
         .layer(cors)
         .layer(Extension(shared_data))

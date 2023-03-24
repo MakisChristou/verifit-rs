@@ -1,6 +1,9 @@
-use crate::database::users::Entity as Users;
-use crate::database::users::{self, Model};
+use crate::database;
+// use crate::database::users::Entity as Users;
+use crate::database::users::Model;
+use crate::database::{users, users::Entity as Users};
 use crate::utils::jwt::create_jwt;
+use crate::utils::jwt::is_valid;
 use axum::{http::StatusCode, Extension, Json};
 use dotenvy_macro::dotenv;
 use lettre::message::header::ContentType;
@@ -8,17 +11,24 @@ use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
 use log::{error, warn};
 use regex::Regex;
-use sea_orm::ColumnTrait;
 use sea_orm::EntityTrait;
 use sea_orm::IntoActiveModel;
 use sea_orm::QueryFilter;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, Set};
+use sea_orm::{ColumnTrait, DbErr};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct RequestUser {
     username: String,
     password: String,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct PasswordResetUser {
+    username: String,
+    new_password: String,
+    reset_code: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -222,13 +232,62 @@ pub async fn request_password_reset(
 
 pub async fn change_password(
     Extension(database): Extension<DatabaseConnection>,
-    Json(request_user): Json<RequestUser>,
+    Json(request_user): Json<PasswordResetUser>,
 ) -> Result<(), StatusCode> {
+    warn!("change_password attempt with email: {}", {
+        request_user.username.to_string()
+    });
+
     // Check if username is in database
+    let db_user = Users::find()
+        .filter(users::Column::Username.eq(request_user.username))
+        .one(&database)
+        .await
+        .map_err(|err| {
+            error!("error finding the user {}", err);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    let reset_token = db_user.clone().expect("User not found").reset_code.unwrap();
+
+    // Check that token supplied in request is the one we want
+    if reset_token != request_user.reset_code {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     // Check if user has password reset code and not expired
-    // Check if hashed reset code matches the one sent by user
+    match is_valid(&reset_token) {
+        Ok(true) => {
+            warn!("Password reset token is valid");
+        }
+        Ok(false) => {
+            warn!("Password reset token is invalid (bool)");
+            return Err(StatusCode::BAD_REQUEST);
+        }
+        Err(e) => {
+            warn!("Password reset token is invalid (status code)");
+            return Err(e);
+        }
+    }
+
+    // ToDo: Check if hashed reset code matches the one sent by user
+
     // Check if new password is valid
-    // Change the user's password
+    if !is_valid_password(&request_user.new_password) {
+        warn!("New password is invalid");
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Update the user's password
+    let mut user: users::ActiveModel = db_user.unwrap().into();
+    user.password = Set(hash_password(request_user.new_password)?);
+    user.reset_code = Set(None);
+    user.update(&database).await.map_err(|err| {
+        error!("error updating the user's password {}", err);
+        StatusCode::INTERNAL_SERVER_ERROR
+    });
+
+    warn!("password changed succesfully");
 
     Ok(())
 }
