@@ -1,9 +1,13 @@
+use std::convert::Infallible;
+
 use crate::database;
 // use crate::database::users::Entity as Users;
 use crate::database::users::Model;
 use crate::database::{users, users::Entity as Users};
 use crate::utils::jwt::create_jwt;
 use crate::utils::jwt::is_valid;
+use axum::extract::Query;
+use axum::http::Response;
 use axum::{http::StatusCode, Extension, Json};
 use dotenvy_macro::dotenv;
 use lettre::message::header::ContentType;
@@ -17,6 +21,7 @@ use sea_orm::QueryFilter;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, Set};
 use sea_orm::{ColumnTrait, DbErr};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct RequestUser {
@@ -32,15 +37,32 @@ pub struct PasswordResetUser {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ResponseUser {
+pub struct ResponseLoginUser {
     username: String,
     id: i32,
     token: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct ResponseSignupUser {
+    username: String,
+    id: i32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RequestPasswordResetUser {
     username: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RequestEmailVerificationUser {
+    username: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct QueryParams {
+    username: String,
+    token: String,
 }
 
 fn is_email_valid(email: &str) -> bool {
@@ -85,22 +107,24 @@ fn is_valid_password(password: &str) -> bool {
 pub async fn create_user(
     Extension(database): Extension<DatabaseConnection>,
     Json(request_user): Json<RequestUser>,
-) -> Result<Json<ResponseUser>, StatusCode> {
+) -> Result<Json<ResponseSignupUser>, StatusCode> {
     warn!(
-        "create_user attempt with username: {}",
-        request_user.username.to_string()
+        "create_user attempt with username: {} and password: {}",
+        request_user.username.to_string(),
+        request_user.password.to_string(),
     );
 
     if !is_email_valid(&request_user.username) || !is_valid_password(&request_user.password) {
         return Err(StatusCode::BAD_REQUEST);
     }
-    let expiration_duration: &'static str = dotenv!("TOKEN_EXPIRATION"); // in seconds
-    let jwt = create_jwt(expiration_duration)?;
+
+    let expiration_duration_email_token: &'static str = dotenv!("PASSWORD_RESET_EXPIRATION");
+    let email_verification_jwt = create_jwt(expiration_duration_email_token)?;
 
     let new_user = users::ActiveModel {
-        username: Set(request_user.username),
+        username: Set(request_user.username.clone()),
         password: Set(hash_password(request_user.password)?),
-        token: Set(Some(jwt)),
+        email_token: Set(Some(email_verification_jwt.clone())),
         ..Default::default()
     }
     .save(&database)
@@ -112,20 +136,36 @@ pub async fn create_user(
 
     warn!("create user sucessful");
 
-    Ok(Json(ResponseUser {
-        username: new_user.username.unwrap(),
-        id: new_user.id.unwrap(),
-        token: new_user.token.unwrap(),
-    }))
+    if let Ok(()) = send_email(
+        String::from("Verifit: Email Verification"),
+        format!(
+            "Dear {},\nTo verify your email click on the following link:\n https://verifit.xyz/users/verify-email?username={}&token={}",
+            request_user.username.to_string(),
+            request_user.username.to_string(),
+            email_verification_jwt,
+        ),
+        request_user.username.to_string(),
+    )
+    .await
+    {
+        Ok(Json(ResponseSignupUser {
+            username: new_user.username.unwrap(),
+            id: new_user.id.unwrap(),
+        }))
+    } else {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
 }
 
 pub async fn login(
     Extension(database): Extension<DatabaseConnection>,
     Json(request_user): Json<RequestUser>,
-) -> Result<Json<ResponseUser>, StatusCode> {
-    warn!("login attempt with email: {}", {
-        request_user.username.to_string()
-    });
+) -> Result<Json<ResponseLoginUser>, StatusCode> {
+    warn!(
+        "login attempt with email: {} and password: {}",
+        request_user.username.to_string(),
+        request_user.password.to_string(),
+    );
 
     let db_user = Users::find()
         .filter(users::Column::Username.eq(request_user.username))
@@ -137,10 +177,21 @@ pub async fn login(
         })?;
 
     if let Some(db_user) = db_user {
-        if !verify_password(request_user.password, &db_user.password)? {
-            warn!("user unauthorized");
+        // Check if email is verified
+        if !db_user.is_email_verified {
+            warn!("user unauthorized, email is not verified");
+            return Err(StatusCode::NOT_ACCEPTABLE);
+        }
+
+        // Check if password is correct
+        if !verify_password(&request_user.password, &db_user.password)? {
+            warn!(
+                "user unauthorized, invalid password: {}",
+                request_user.password
+            );
             return Err(StatusCode::UNAUTHORIZED);
         }
+
         let expiration_duration: &'static str = dotenv!("TOKEN_EXPIRATION"); // in seconds
         let jwt = create_jwt(expiration_duration)?;
         let new_token = String::from(jwt);
@@ -156,7 +207,7 @@ pub async fn login(
         warn!("login succesful");
 
         // do the login here
-        Ok(Json(ResponseUser {
+        Ok(Json(ResponseLoginUser {
             username: saved_user.username.unwrap(),
             id: saved_user.id.unwrap(),
             token: Some(saved_user.token.unwrap().unwrap()),
@@ -212,8 +263,8 @@ pub async fn request_password_reset(
     user.token = Set(None);
     let expiration_duration: &'static str = dotenv!("PASSWORD_RESET_EXPIRATION");
     let jwt = create_jwt(expiration_duration)?;
-    let new_reset_code = String::from(jwt);
-    user.reset_code = Set(Some(new_reset_code.clone()));
+    let new_reset_token = String::from(jwt);
+    user.reset_code = Set(Some(new_reset_token.clone()));
 
     let recipient_email = user.username.clone().unwrap();
 
@@ -223,7 +274,13 @@ pub async fn request_password_reset(
     })?;
 
     // Send the recovery email
-    if let Ok(()) = send_reset_email(new_reset_code, recipient_email).await {
+    if let Ok(()) = send_email(
+        String::from("Verifit: Password Reset Code"),
+        generate_reset_code(&new_reset_token),
+        recipient_email,
+    )
+    .await
+    {
         return Ok(());
     } else {
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
@@ -251,7 +308,7 @@ pub async fn change_password(
     let reset_token = db_user.clone().expect("User not found").reset_code.unwrap();
 
     // Check that token supplied in request is the one we want
-    if reset_token != request_user.reset_code {
+    if generate_reset_code(&reset_token) != request_user.reset_code {
         return Err(StatusCode::BAD_REQUEST);
     }
 
@@ -292,17 +349,19 @@ pub async fn change_password(
     Ok(())
 }
 
-async fn send_reset_email(new_reset_code: String, username: String) -> Result<(), StatusCode> {
+async fn send_email(title: String, message: String, username: String) -> Result<(), StatusCode> {
     let email_username: &'static str = dotenv!("EMAIL_USERNAME");
     let email_password: &'static str = dotenv!("EMAIL_PASSWORD");
     let smtp_server: &'static str = dotenv!("SMTP_SERVER");
 
+    warn!("Sending to email: {}", username);
+
     let email = Message::builder()
         .from(format!("<{}>", email_username).parse().unwrap())
         .to(format!("<{}>", username).parse().unwrap())
-        .subject("Password Reset Code")
+        .subject(title)
         .header(ContentType::TEXT_PLAIN)
-        .body(new_reset_code)
+        .body(message)
         .unwrap();
 
     let creds = Credentials::new(email_username.to_owned(), email_password.to_owned());
@@ -326,10 +385,135 @@ async fn send_reset_email(new_reset_code: String, username: String) -> Result<()
     }
 }
 
+pub async fn verify_email(
+    Extension(database): Extension<DatabaseConnection>,
+    Query(params): Query<QueryParams>,
+) -> Result<Response<String>, StatusCode> {
+    format!(
+        "Received query parameters: username = {}, token = {}",
+        params.username, params.token,
+    );
+
+    // Check if username is in database
+    let db_user = Users::find()
+        .filter(users::Column::Username.eq(params.username))
+        .one(&database)
+        .await
+        .map_err(|err| {
+            error!("error finding the user {}", err);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    if db_user.clone().unwrap().is_email_verified {
+        warn!("email already verified");
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Check if token is valid
+    if let Ok(validity) = is_valid(&params.token) {
+        if !validity {
+            warn!("invalid token");
+            return Ok(send_http_response("Token invalid"));
+        }
+    } else {
+        error!("is_valid returned an error");
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    // Check if user token matches the querry parameter
+    if db_user.clone().unwrap().email_token != Some(params.token) {
+        return Ok(send_http_response("Token invalid"));
+    }
+
+    // Update user in database with verified email
+    let mut user: users::ActiveModel = db_user.unwrap().into();
+    user.is_email_verified = Set(true);
+    user.update(&database).await.map_err(|err| {
+        error!("error updating the user's is_email_verified field {}", err);
+        StatusCode::INTERNAL_SERVER_ERROR
+    });
+
+    warn!("email verified succesfully");
+    return Ok(send_http_response("email verified"));
+}
+
+fn send_http_response(response_text: &str) -> Response<String> {
+    let html = format!("<html><body><h1>{}</h1></body></html>", response_text);
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "text/html")
+        .body(html)
+        .unwrap()
+}
+
+pub async fn request_email_verification(
+    Extension(database): Extension<DatabaseConnection>,
+    Json(email_verification_user): Json<RequestEmailVerificationUser>,
+) -> Result<(), StatusCode> {
+    let username = email_verification_user.username.clone();
+
+    warn!("request_email_verification email {}", username,);
+
+    // Check if username is in database
+    let mut db_user = Users::find()
+        .filter(users::Column::Username.eq(username.clone()))
+        .one(&database)
+        .await
+        .map_err(|err| {
+            error!("error finding the user {}", err);
+            StatusCode::NOT_FOUND
+        })?;
+
+    let mut user = match db_user.clone() {
+        Some(user) => user.into_active_model(),
+        None => return Err(StatusCode::NOT_FOUND),
+    };
+
+    // Generate new email verification token
+    let expiration_duration_email_token: &'static str = dotenv!("PASSWORD_RESET_EXPIRATION");
+    let email_verification_jwt = create_jwt(expiration_duration_email_token)?;
+
+    // Update the user's email verification token
+    let mut user: users::ActiveModel = db_user.unwrap().into();
+    user.email_token = Set(Some(email_verification_jwt.clone()));
+    user.update(&database).await.map_err(|err| {
+        error!("error updating the user's password {}", err);
+        StatusCode::INTERNAL_SERVER_ERROR
+    });
+
+    if let Ok(()) = send_email(
+        String::from("Verifit: Email Verification"),
+        format!(
+            "Dear {},\nTo verify your email click on the following link:\n https://verifit.xyz/users/verify-email?username={}&token={}",
+            username,
+            username,
+            email_verification_jwt,
+        ),
+        username)
+    .await
+    {
+        Ok(())
+    } else {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+}
+
 fn hash_password(password: String) -> Result<String, StatusCode> {
     bcrypt::hash(password, 10).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
-fn verify_password(password: String, hash: &str) -> Result<bool, StatusCode> {
+fn verify_password(password: &str, hash: &str) -> Result<bool, StatusCode> {
     bcrypt::verify(password, hash).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+fn generate_reset_code(jwt_token: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(jwt_token.as_bytes());
+    let hash_result = hasher.finalize();
+
+    // 6 decimal digits
+    hash_result[..3]
+        .iter()
+        .map(|c| c.to_string())
+        .collect::<String>()
 }

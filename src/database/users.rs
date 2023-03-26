@@ -15,6 +15,9 @@ pub struct Model {
     pub token: Option<String>,
     #[sea_orm(column_type = "Text", nullable)]
     pub reset_code: Option<String>,
+    pub is_email_verified: bool,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub email_token: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

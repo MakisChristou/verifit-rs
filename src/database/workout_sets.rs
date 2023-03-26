@@ -2,8 +2,9 @@
 
 use super::sea_orm_active_enums::Bodypart;
 use sea_orm::entity::prelude::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, DeriveEntityModel)]
 #[sea_orm(table_name = "workout_sets")]
 pub struct Model {
     #[sea_orm(primary_key)]

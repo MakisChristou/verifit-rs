@@ -23,7 +23,10 @@ use guard::guard;
 use hello_world::hello_world;
 use update_exercises::atomic_update_exercise;
 use update_sets::{atomic_update_set, atomic_update_sets};
-use users::{change_password, create_user, login, logout, request_password_reset};
+use users::{
+    change_password, create_user, login, logout, request_email_verification,
+    request_password_reset, verify_email,
+};
 
 use axum::http::Method;
 use axum::middleware;
@@ -66,6 +69,11 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
             "/users/request-password-reset",
             post(request_password_reset),
         )
+        .route(
+            "/users/request-email-verification",
+            post(request_email_verification),
+        )
+        .route("/users/verify-email", get(verify_email))
         .route("/users/change-password", post(change_password))
         .route("/", get(hello_world))
         .layer(cors)
