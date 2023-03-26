@@ -20,7 +20,7 @@ use delete_set::{delete_set, delete_sets};
 use get_exercises::{get_all_exercises, get_one_exercise};
 use get_workout_sets::{get_all_workout_sets, get_one_workout_set};
 use guard::guard;
-use hello_world::hello_world;
+use hello_world::{hello_world, privacy_policy};
 use update_exercises::atomic_update_exercise;
 use update_sets::{atomic_update_set, atomic_update_sets};
 use users::{
@@ -76,6 +76,7 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .route("/users/verify-email", get(verify_email))
         .route("/users/change-password", post(change_password))
         .route("/", get(hello_world))
+        .route("/privacy_policy", get(privacy_policy))
         .layer(cors)
         .layer(Extension(shared_data))
         .route("/users", post(create_user))
