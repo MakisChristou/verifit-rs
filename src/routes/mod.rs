@@ -6,6 +6,7 @@ mod delete_set;
 mod get_exercises;
 mod get_workout_sets;
 mod guard;
+mod request_logger;
 mod hello_world;
 mod update_exercises;
 mod update_sets;
@@ -20,6 +21,7 @@ use delete_set::{delete_set, delete_sets};
 use get_exercises::{get_all_exercises, get_one_exercise};
 use get_workout_sets::{get_all_workout_sets, get_one_workout_set};
 use guard::guard;
+use request_logger::request_logger;
 use hello_world::{hello_world, privacy_policy};
 use update_exercises::atomic_update_exercise;
 use update_sets::{atomic_update_set, atomic_update_sets};
@@ -30,6 +32,10 @@ use users::{
 
 use axum::http::Method;
 use axum::middleware;
+use std::net::SocketAddr;
+use tower_http::trace::{self, TraceLayer};
+use tracing::Level;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use axum::Extension;
 use axum::{
     body::Body,
@@ -80,5 +86,13 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .layer(Extension(shared_data))
         .route("/users", post(create_user))
         .route("/users/login", post(login))
+        // .route_layer(middleware::from_fn(request_logger))
+        // .layer(TraceLayer::new_for_http())
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(trace::DefaultMakeSpan::new()
+                    .level(Level::WARN))
+                .on_response(trace::DefaultOnResponse::new()
+                    .level(Level::WARN)),)
         .layer(Extension(database))
 }

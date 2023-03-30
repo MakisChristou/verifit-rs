@@ -12,7 +12,7 @@ sea-orm = { version = "0.11.0", features = ["sqlx-postgres", "runtime-tokio-rust
 tokio = { version = "1.26.0", features = ["full"] }
 axum = { version = "0.6.10", features = ["headers"] }
 serde = { version = "1.0.152", features = ["derive"] }
-tower-http = { version = "0.4.0", features = ["cors"] }
+tower-http = { version = "0.4.0", features = ["cors", "trace"] }
 bcrypt = "0.14.0"
 jsonwebtoken = "8.2.0"
 chrono = "0.4.23"
@@ -21,3 +21,5 @@ log = "0.4.17"
 simplelog = "0.12.1"
 lettre = "0.10.3"
 sha2 = "0.10.6"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"]}
+tracing = "0.1.37"
