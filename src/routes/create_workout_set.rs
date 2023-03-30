@@ -6,6 +6,7 @@ use axum::headers::authorization::Bearer;
 use axum::headers::Authorization;
 use axum::http::StatusCode;
 use axum::{Extension, Json, TypedHeader};
+use log::warn;
 use sea_orm::EntityTrait;
 use sea_orm::QueryFilter;
 use sea_orm::{prelude::DateTimeWithTimeZone, DatabaseConnection};
@@ -29,6 +30,8 @@ pub async fn create_workout_set(
     Extension(database): Extension<DatabaseConnection>,
     Json(request_workout_set): Json<RequestWorkoutSet>,
 ) -> Result<Json<i32>, StatusCode> {
+    warn!("set created by user: {}", user.username);
+
     let user = user.into_active_model();
 
     let new_workout_set = workout_sets::ActiveModel {
@@ -52,8 +55,11 @@ pub async fn create_workout_sets(
     Extension(database): Extension<DatabaseConnection>,
     Json(request_workout_set_vector): Json<Vec<RequestWorkoutSet>>,
 ) -> Result<(), StatusCode> {
+    warn!("{} sets created by user: {}", request_workout_set_vector.len(), user.username);
+
     // No one in their right mind has done so many sets in their life
     if request_workout_set_vector.len() > 3_650_000 {
+        warn!("cannot create more than 3650000 sets king...");
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
 

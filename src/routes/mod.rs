@@ -55,7 +55,6 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
 
     Router::new()
         .route("/users/logout", post(logout))
-        // .route("/exercises", post(create_exercise))
         .route("/sets", post(create_workout_set))
         .route("/sets/bulk", post(create_workout_sets))
         .route("/sets/bulk", delete(delete_sets))

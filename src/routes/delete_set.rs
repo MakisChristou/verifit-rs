@@ -3,6 +3,7 @@ use crate::database::{
 };
 use axum::Json;
 use axum::{extract::Path, http::StatusCode, Extension};
+use log::warn;
 use sea_orm::ColumnTrait;
 use sea_orm::QueryFilter;
 use sea_orm::{DatabaseConnection, EntityTrait, IntoActiveModel};
@@ -12,6 +13,8 @@ pub async fn delete_set(
     Path(set_id): Path<i32>,
     Extension(database): Extension<DatabaseConnection>,
 ) -> Result<(), StatusCode> {
+    warn!("set deleted by user: {}", user.username);
+
     let user = user.into_active_model();
 
     let set = if let Some(set) = Sets::find_by_id(set_id)
@@ -38,6 +41,8 @@ pub async fn delete_sets(
     Extension(database): Extension<DatabaseConnection>,
     Json(set_ids): Json<Vec<i32>>,
 ) -> Result<(), StatusCode> {
+    warn!("{} sets deleted by user: {}", set_ids.len(), user.username);
+
     let user_id = user.into_active_model().id.unwrap();
 
     Sets::delete_many()

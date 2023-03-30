@@ -245,9 +245,14 @@ pub async fn request_password_reset(
         password_reset_user.username
     );
 
+    if !is_email_valid(&password_reset_user.username){
+        warn!("email invalid");
+        return Err(StatusCode::NOT_FOUND);
+    }
+
     // Check if username is in database
     let mut db_user = Users::find()
-        .filter(users::Column::Username.eq(password_reset_user.username))
+        .filter(users::Column::Username.eq(password_reset_user.username.clone()))
         .one(&database)
         .await
         .map_err(|err| {
@@ -259,6 +264,8 @@ pub async fn request_password_reset(
         Some(user) => user.into_active_model(),
         None => return Err(StatusCode::NOT_FOUND),
     };
+
+    warn!("user with email {} found in database", password_reset_user.username);
 
     user.token = Set(None);
     let expiration_duration: &'static str = dotenv!("PASSWORD_RESET_EXPIRATION");
