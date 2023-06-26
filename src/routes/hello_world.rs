@@ -4,6 +4,29 @@ pub async fn hello_world() -> String {
     String::from("Hello World from a custom file")
 }
 
+pub async fn account_delete() -> Response<String> {
+    let response_text = String::from("
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Account/Data Deletion</title>
+</head>
+<body>
+	<h1>Account/Data Deletion</h1>
+    <p> To delete all workout data you can use the Android app and navigate to the Settings, and then Delete All. This will permanently delete all sets stored on the server. </p>
+	<p> If you want to delete your account data too please contact us at <a href='mailto:support@verifit.xyz'>support@verifit.xyz</a> </p>
+</body>
+</html>
+");
+
+    let html = format!("<html><body><h1>{}</h1></body></html>", response_text);
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "text/html")
+        .body(html)
+        .unwrap()
+}
+
 pub async fn privacy_policy() -> Response<String> {
     let response_text = String::from("
 <!DOCTYPE html>

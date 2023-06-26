@@ -22,7 +22,7 @@ use get_exercises::{get_all_exercises, get_one_exercise};
 use get_workout_sets::{get_all_workout_sets, get_one_workout_set};
 use guard::guard;
 use request_logger::request_logger;
-use hello_world::{hello_world, privacy_policy};
+use hello_world::{hello_world, privacy_policy, account_delete};
 use update_exercises::atomic_update_exercise;
 use update_sets::{atomic_update_set, atomic_update_sets};
 use users::{
@@ -44,6 +44,7 @@ use axum::{
 };
 use sea_orm::DatabaseConnection;
 use tower_http::cors::{Any, CorsLayer};
+
 
 #[derive(Clone)]
 pub struct SharedData {
@@ -82,6 +83,7 @@ pub async fn create_routes(database: DatabaseConnection) -> Router {
         .route("/users/change-password", post(change_password))
         .route("/", get(hello_world))
         .route("/privacy_policy", get(privacy_policy))
+        .route("/account_delete", get(account_delete))
         .layer(cors)
         .layer(Extension(shared_data))
         .route("/users", post(create_user))
